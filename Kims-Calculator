@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Personal Finance Manager (With Saving & Export)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- General Variables and Reset --- */
+        :root {
+            --color-primary: #5974a9; /* Deep Blue/Gray for structure */
+            --color-secondary: #9cbddb; /* Soft Muted Blue for accents */
+            --color-background: #f4f7fa;
+            --color-white: #ffffff;
+            --color-text: #333333;
+            --color-success: #4CAF50;
+            --color-danger: #CC0000;
+            --color-export: #f39c12; /* Orange for Export */
+        }
+
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            padding: 0;
+            margin: 0;
+            background-color: var(--color-background);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- Header/Navigation --- */
+        header {
+            width: 100%;
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            padding: 20px 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            text-align: center;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        /* --- Main Content Layout --- */
+        .app-container {
+            display: flex;
+            flex-direction: row;
+            width: 90%;
+            max-width: 1200px;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        /* --- Panel Styling --- */
+        .input-panel, .output-panel {
+            padding: 30px;
+            border-radius: 15px;
+            background-color: var(--color-white); 
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            align-self: stretch;
+            transition: all 0.3s ease;
+        }
+        
+        .input-panel {
+            flex: 1;
+            min-width: 380px;
+        }
+        
+        .output-panel {
+            flex: 2;
+            min-width: 650px;
+        }
+
+        h2 { 
+            color: var(--color-primary); 
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--color-secondary);
+            padding-bottom: 10px;
+        }
+
+        /* --- Form Elements --- */
+        label { 
+            display: block; 
+            margin-top: 15px; 
+            font-weight: 600; 
+            color: var(--color-text);
+            font-size: 14px;
+        }
+
+        input[type="number"] { 
+            width: calc(100% - 24px); 
+            padding: 12px; 
+            margin-top: 5px; 
+            box-sizing: border-box; 
+            border: 1px solid #c0c0c0; 
+            border-radius: 8px; 
+            font-size: 16px;
+        }
+
+        button { 
+            margin-top: 30px; 
+            padding: 14px 20px; 
+            background-color: var(--color-secondary); 
+            color: var(--color-white); 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-size: 18px; 
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #7a9cc4;
+        }
+
+        #resetButton {
+            background-color: #f44336;
+            margin-top: 15px;
+        }
+        #resetButton:hover {
+            background-color: #d32f2f;
+        }
+        
+        #exportButton {
+            background-color: var(--color-export); 
+            margin-top: 20px;
+            font-size: 16px;
+            padding: 10px 20px;
+        }
+        #exportButton:hover {
+            background-color: #e68a00;
+        }
+
+        /* --- Summary Table Styling --- */
+        .summary-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            font-size: 1em;
+        }
+        .summary-table th, .summary-table td {
+            padding: 12px;
+            text-align: left;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* subtle separation */
+        }
+        .summary-table th {
+            background-color: #e9efff;
+            color: var(--color-text);
+            font-weight: 700;
+        }
+        
+        /* Pastel Row Colors */
+        .savings-row { background-color: #ffc9e2; border-radius: 8px; } 
+        .dispensable-row { background-color: #d1ecf1; border-radius: 8px; } 
+        .leisure-row { background-color: #fff3c9; border-radius: 8px; } 
+
+        .total-row {
+            background-color: #b5e4a8 !important; 
+            font-weight: bold;
+            font-size: 1.1em;
+            border-top: 2px solid var(--color-success);
+            margin-top: 15px;
+            border-radius: 8px;
+        }
+        
+        /* Variance Colors */
+        .variance-positive { color: var(--color-success); font-weight: 700; }
+        .variance-negative { color: var(--color-danger); font-weight: 700; }
+        
+        /* Responsive Design */
+        @media (max-width: 1100px) {
+            .app-container {
+                flex-direction: column;
+            }
+            .input-panel, .output-panel {
+                min-width: unset;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body onload="loadInputs()">
+
+    <header>
+        <h1>💵 Personal Finance Manager (₱)</h1>
+    </header>
+
+    <div class="app-container">
+
+        <div class="input-panel">
+            <h2>📝 Budget Input & Actual Spending</h2>
+            
+            <label for="income">Total Monthly Income (₱)</label>
+            <input type="number" id="income" value="50000" min="0" oninput="calculateBudgetSplit()">
+            <p style="color: #555; font-size: 0.8em; margin-top: 5px;">*30/45/25 Rule Applied: 30% Savings, 45% Living, 25% Leisure</p>
+
+            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 30px 0;">
+            
+            <h3>💸 Daily & Variable Expenses</h3>
+            
+            <label for="food">Food (₱)</label>
+            <input type="number" id="food" value="0" min="0" oninput="calculateBudgetSplit()">
+
+            <label for="transportation">Transportation (₱)</label>
+            <input type="number" id="transportation" value="0" min="0" oninput="calculateBudgetSplit()">
+
+            <label for="house">House/Utilities (Variable ₱)</label>
+            <input type="number" id="house" value="0" min="0" oninput="calculateBudgetSplit()">
+
+            <label for="apparel">Apparel/Personal (₱)</label>
+            <input type="number" id="apparel" value="0" min="0" oninput="calculateBudgetSplit()">
+
+            <label for="gifts">Gifts/Miscellaneous (₱)</label>
+            <input type="number" id="gifts" value="0" min="0" oninput="calculateBudgetSplit()">
+            
+            <label for="leisureActual">Actual Leisure Spending (₱)</label>
+            <input type="number" id="leisureActual" value="0" min="0" oninput="calculateBudgetSplit()">
+
+            <button onclick="calculateBudgetSplit()">Update Budget Summary & Save Data</button>
+            <button id="resetButton" onclick="resetInputs()">Reset All Inputs</button>
+        </div>
+
+        <div class="output-panel">
+            <h2>📈 Monthly Budget Summary</h2>
+            <div id="results">
+                </div>
+            
+            <button id="exportButton" onclick="exportSummaryToCSV()">⬇️ Export Summary to CSV</button>
+
+            <p style="text-align: center; color: #555; margin-top: 20px;">*Fixed Rent Fee of ₱7,000 is automatically deducted from the Dispensable (45%) budget.</p>
+        </div>
+    </div>
+
+    <script>
+        // Array of input IDs we want to save
+        const inputIds = ['income', 'food', 'transportation', 'house', 'apparel', 'gifts', 'leisureActual'];
+
+        // --- Shared Utilities ---
+        function formatCurrency(amount) {
+            // Returns currency formatted string (e.g., ₱ 10,000.00)
+            return new Intl.NumberFormat('en-PH', {
+                style: 'currency',
+                currency: 'PHP',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+        
+        // --- Persistence Functions ---
+
+        function saveInputs() {
+            const data = {};
+            inputIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    data[id] = element.value;
+                }
+            });
+            localStorage.setItem('budgetAppInputs', JSON.stringify(data));
+        }
+
+        function loadInputs() {
+            const savedData = localStorage.getItem('budgetAppInputs');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                inputIds.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element && data[id] !== undefined) {
+                        element.value = data[id];
+                    }
+                });
+            }
+            calculateBudgetSplit();
+        }
+
+        function resetInputs() {
+            inputIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = (id === 'income') ? 50000 : 0;
+                }
+            });
+            localStorage.removeItem('budgetAppInputs');
+            calculateBudgetSplit();
+        }
+
+        // --- Budget Calculator Logic (30/45/25) ---
+        const EMERGENCY_FUND_PERCENT = 0.30; 
+        const DISPENSABLE_ACCOUNT_PERCENT = 0.45; 
+        const LEISURE_PERCENT = 0.25; 
+        const RENTAL_FEE = 7000; 
+
+        // Global variable to store the last calculated summary data for export
+        let lastSummaryData = {};
+
+        function calculateBudgetSplit() {
+            const income = parseFloat(document.getElementById('income').value) || 0;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = ''; 
+
+            saveInputs(); 
+
+            if (income <= 0) {
+                resultsDiv.innerHTML = '<p style="color: var(--color-danger); text-align: center;">Please enter a valid monthly income to generate the budget.</p>';
+                return;
+            }
+
+            // --- 1. PLANNED ALLOCATIONS ---
+            const plannedEmergency = income * EMERGENCY_FUND_PERCENT;
+            const plannedDispensableTotal = income * DISPENSABLE_ACCOUNT_PERCENT;
+            const plannedLeisure = income * LEISURE_PERCENT;
+            
+            // --- 2. ACTUAL EXPENSES ---
+            const actualRent = RENTAL_FEE;
+            const actualFood = parseFloat(document.getElementById('food').value) || 0;
+            const actualTransportation = parseFloat(document.getElementById('transportation').value) || 0;
+            const actualHouse = parseFloat(document.getElementById('house').value) || 0;
+            const actualApparel = parseFloat(document.getElementById('apparel').value) || 0;
+            const actualGifts = parseFloat(document.getElementById('gifts').value) || 0;
+            const actualLeisure = parseFloat(document.getElementById('leisureActual').value) || 0; 
+            
+            // --- 3. CALCULATIONS ---
+            
+            const actualDailySpent = actualFood + actualTransportation + actualHouse + actualApparel + actualGifts;
+            const totalActualDispensableSpent = actualRent + actualDailySpent;
+
+            const plannedRemainingDispensable = plannedDispensableTotal - RENTAL_FEE;
+            
+            // Final Balances
+            const netDispensableBalance = plannedRemainingDispensable - actualDailySpent;
+            const netLeisureBalance = plannedLeisure - actualLeisure;
+            const totalRemainingSavings = plannedEmergency; 
+            
+            const totalNetCashFlow = totalRemainingSavings + netDispensableBalance + netLeisureBalance;
+
+            // Store summary data in global variable for export
+            lastSummaryData = {
+                'Total Monthly Income': income,
+                'Planned Emergency (30%)': plannedEmergency,
+                'Planned Dispensable (45%)': plannedDispensableTotal,
+                'Planned Leisure (25%)': plannedLeisure,
+                'Actual Rent Fee': actualRent,
+                'Actual Daily Spent': actualDailySpent,
+                'Net Dispensable Balance': netDispensableBalance,
+                'Net Leisure Balance': netLeisureBalance,
+                'GRAND TOTAL NET CASH FLOW': totalNetCashFlow
+            };
+
+            // Function to get variance class for coloring
+            const getVarianceClass = (amount) => amount >= 0 ? 'variance-positive' : 'variance-negative';
+
+            // --- 4. DISPLAY SUMMARY TABLE (HTML) ---
+            
+            const tableHTML = `
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Planned Budget (₱)</th>
+                            <th>Actual Spent (₱)</th>
+                            <th>Balance (₱)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="savings-row">
+                            <td>💰 **Emergency Fund (30%)**</td>
+                            <td>${formatCurrency(plannedEmergency)}</td>
+                            <td>${formatCurrency(0)}</td>
+                            <td><span class="variance-positive">${formatCurrency(plannedEmergency)}</span></td>
+                        </tr>
+                        
+                        <tr class="dispensable-row">
+                            <td>💳 **Dispensable Account (45% Base)**</td>
+                            <td>${formatCurrency(plannedDispensableTotal)}</td>
+                            <td>${formatCurrency(totalActualDispensableSpent)}</td>
+                            <td></td>
+                        </tr>
+                        <tr class="dispensable-row" style="font-size: 0.9em;">
+                            <td style="padding-left: 30px;">* Fixed Rent Fee</td>
+                            <td>${formatCurrency(actualRent)}</td>
+                            <td>${formatCurrency(actualRent)}</td>
+                            <td>${formatCurrency(0)}</td>
+                        </tr>
+                        <tr class="dispensable-row" style="font-size: 0.9em;">
+                            <td style="padding-left: 30px;">* Total Daily/Variable Spending</td>
+                            <td>${formatCurrency(plannedRemainingDispensable)}</td>
+                            <td>${formatCurrency(actualDailySpent)}</td>
+                            <td></td>
+                        </tr>
+
+                        <tr class="dispensable-row" style="border-top: 2px dashed #a0a0a0; background-color: #b3e0fc;">
+                            <td style="font-weight: bold;">**NET DISPENSABLE REMAINING**</td>
+                            <td style="font-weight: bold;"></td>
+                            <td style="font-weight: bold;"></td>
+                            <td style="font-weight: bold;"><span class="${getVarianceClass(netDispensableBalance)}">${formatCurrency(netDispensableBalance)}</span></td>
+                        </tr>
+
+                        <tr class="leisure-row">
+                            <td>🎉 **Leisure Fund (25%)**</td>
+                            <td>${formatCurrency(plannedLeisure)}</td>
+                            <td>${formatCurrency(actualLeisure)}</td>
+                            <td><span class="${getVarianceClass(netLeisureBalance)}">${formatCurrency(netLeisureBalance)}</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td>**GRAND TOTAL NET CASH FLOW**</td>
+                            <td>${formatCurrency(income)}</td>
+                            <td>${formatCurrency(totalActualDispensableSpent + actualLeisure)}</td>
+                            <td style="font-size: 1.4em;"><span class="${getVarianceClass(totalNetCashFlow)}">${formatCurrency(totalNetCashFlow)}</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+
+            resultsDiv.innerHTML = tableHTML;
+        }
+
+        // --- Export Functionality ---
+        function exportSummaryToCSV() {
+            if (Object.keys(lastSummaryData).length === 0) {
+                alert("Please calculate the budget summary first.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // 1. Add Headers
+            csvContent += "Category,Amount\n";
+
+            // 2. Add Data Rows
+            for (const category in lastSummaryData) {
+                // Use a standard numerical format for CSV, not the currency string
+                csvContent += `${category},${lastSummaryData[category].toFixed(2)}\n`;
+            }
+
+            // 3. Create a Download Link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            
+            // Set the filename based on the current date
+            const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `budget_summary_${date}.csv`);
+            
+            document.body.appendChild(link); // Required for Firefox
+            link.click(); // Trigger the download
+            document.body.removeChild(link); // Clean up
+        }
+    </script>
+
+</body>
+</html>
